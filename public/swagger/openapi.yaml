@@ -1,0 +1,15 @@
+openapi: 3.0.0
+info:
+  title: 'Get Userssszzz Data'
+  version: 1.0.0
+paths:
+  '/users/{UUID}':
+    get:
+      tags:
+        - USERS
+      summary: 'Get User Details'
+      description: 'Get User Details'
+      operationId: 'App\Http\Controllers\AuthController::signUp'
+      responses:
+        default:
+          description: 'successful operation'

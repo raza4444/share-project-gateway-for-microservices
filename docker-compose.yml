@@ -1,0 +1,91 @@
+version: '3'
+
+networks:
+  zoofyBackendCluster:
+    external:
+      name: zoofy-default
+
+services:
+  gateway-zoofy-nginx:
+    image: nginx:stable-alpine
+    container_name: zoofy-gateway
+    depends_on:
+      - gateway-zoofy-mysql
+      - gateway-zoofy-redis
+      - gateway-zoofy-php
+    ports:
+      - "8095:80"
+    volumes:
+      - .:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - zoofyBackendCluster
+
+  gateway-zoofy-mysql:
+    image: mysql:5.7.29
+    container_name: gateway-zoofy-mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "33070:3306"
+    environment:
+      MYSQL_DATABASE: zoofy_identity
+      MYSQL_USER: root
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - zoofyBackendCluster
+
+  gateway-zoofy-php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gateway-zoofy-php
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "9010:9000"
+    networks:
+      - zoofyBackendCluster
+
+  gateway-zoofy-redis:
+    image: redis:alpine
+    container_name: gateway-zoofy-redis
+    restart: unless-stopped
+    tty: true
+    command: redis-server --appendonly yes
+    ports:
+      - "6390:6379"
+    volumes:
+      - ./redisdata:/data
+    networks:
+      - zoofyBackendCluster
+
+  gateway-zoofy-composer:
+    image: composer:latest
+    container_name: gateway-zoofy-composer
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - gateway-zoofy-php
+    networks:
+      - zoofyBackendCluster
+
+  gateway-zoofy-artisan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gateway-zoofy-artisan
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - gateway-zoofy-mysql
+    working_dir: /var/www/html
+    entrypoint: ['php', '/var/www/html/artisan']
+    networks:
+      - zoofyBackendCluster
